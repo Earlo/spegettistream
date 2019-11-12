@@ -31,22 +31,29 @@ def genHeader(sampleRate, bitsPerSample, channels):
     o += (datasize).to_bytes(4,'little')                                    # (4byte) Data size in bytes
     return o
 
+
+bitsPerSample = 16
+wav_header = genHeader(RATE, bitsPerSample, CHANNELS)
+stream = audio1.open(format=FORMAT, channels=CHANNELS,
+                rate=RATE, input=True,input_device_index=0,
+                frames_per_buffer=CHUNK)
+
+info = audio1.get_host_api_info_by_index(0)
+numdevices = info.get('deviceCount')
+for i in range(0, numdevices):
+  if (audio1.get_device_info_by_host_api_device_index(0,i).get('maxInputChannels')) > 0:
+    print("Input Device id ", i, " - ", audio1.get_device_info_by_host_api_device_index(0, i).get('name'))
+
 @app.route('/audio')
 def audio():
     # start Recording
     def sound():
-        bitsPerSample = 16
-        wav_header = genHeader(RATE, FORMAT, CHANNELS)
-
-        stream = audio1.open(format=FORMAT, channels=CHANNELS,
-                        rate=RATE, input=True,input_device_index=0,
-                        frames_per_buffer=CHUNK)
-        print("recording...")
         #frames = []
-
+        print("recording...")
+        yield(wav_header)
         while True:
-            data = wav_header+stream.read(CHUNK)
-            yield(data)
+            audiodata = stream.read(CHUNK)
+            yield(audiodata)
 
     return Response(sound())
 
@@ -57,4 +64,4 @@ def index():
 
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', debug=True, threaded=True,port=5000)
+    app.run(host='0.0.0.0', threaded=True, port=8080)
